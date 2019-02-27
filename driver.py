@@ -5,7 +5,7 @@ import os.path
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.error import HttpError
+from googleapiclient.errors import HttpError
 
 from gardnr import constants, drivers
 
