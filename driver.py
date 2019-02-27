@@ -73,7 +73,7 @@ class GoogleSheets(drivers.Exporter):
             }
             self.service.spreadsheets().values().append(
                 spreadsheetId=self.sheet_id,
-                range='{sheet}!A:A'.format(log.metric.name),
+                range='{sheet}!A:A'.format(sheet=log.metric.name),
                 body=resource,
                 valueInputOption='USER_ENTERED'
             ).execute()
