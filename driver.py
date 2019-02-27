@@ -41,7 +41,7 @@ class GoogleSheets(drivers.Exporter):
 
     def export(self, logs):
         response = self.service.spreadsheets().get(
-            spreadsheetId=spreadsheetId
+            spreadsheetId=self.sheet_id
         ).execute()
 
         sheet_names = [sheet['properties']['title']
