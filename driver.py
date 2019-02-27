@@ -47,7 +47,6 @@ class GoogleSheets(drivers.Exporter):
         sheet_names = [sheet['properties']['title']
                        for sheet in response['sheets']]
 
-
         for log in logs:
             if log.metric.name not in sheet_names:
                 batch_update_request = {
@@ -67,7 +66,12 @@ class GoogleSheets(drivers.Exporter):
 
                 sheet_names.append(log.metric.name)
 
-            values = [[log.timestamp.isoformat(), log.value]]
+            if type(log.value) is bytes:
+                log_value = log.value.decode('utf-8')
+            else:
+                log_value = log.value
+
+            values = [[log.timestamp.isoformat(), log_value]]
             resource = {
               'values': values
             }
