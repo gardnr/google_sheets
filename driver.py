@@ -40,14 +40,15 @@ class GoogleSheets(drivers.Exporter):
         self.service = build('sheets', 'v4', credentials=creds)
 
     def export(self, logs):
-        response = service.spreadsheets().get(spreadsheetId=spreadsheetId).execute()
+        response = self.service.spreadsheets().get(
+            spreadsheetId=spreadsheetId
+        ).execute()
 
         sheet_names = [sheet['properties']['title']
                        for sheet in response['sheets']]
 
 
         for log in logs:
-
             if log.metric.name not in sheet_names:
                 batch_update_request = {
                     'requests': [{
@@ -59,7 +60,7 @@ class GoogleSheets(drivers.Exporter):
                     }]
                 }
 
-                service.spreadsheets().batchUpdate(
+                self.service.spreadsheets().batchUpdate(
                     spreadsheetId=self.sheet_id,
                     body=batch_update_request
                 ).execute()
@@ -70,7 +71,7 @@ class GoogleSheets(drivers.Exporter):
             resource = {
               'values': values
             }
-            service.spreadsheets().values().append(
+            self.service.spreadsheets().values().append(
                 spreadsheetId=self.sheet_id,
                 range='{sheet}!A:A'.format(log.metric.name),
                 body=resource,
