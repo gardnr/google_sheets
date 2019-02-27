@@ -1,9 +1,11 @@
+from http import HTTPStatus
 import pickle
 import os.path
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.error import HttpError
 
 from gardnr import constants, drivers
 
@@ -39,45 +41,77 @@ class GoogleSheets(drivers.Exporter):
 
         self.service = build('sheets', 'v4', credentials=creds)
 
-    def export(self, logs):
-        response = self.service.spreadsheets().get(
-            spreadsheetId=self.sheet_id
-        ).execute()
-
-        sheet_names = [sheet['properties']['title']
-                       for sheet in response['sheets']]
+    @staticmethod
+    def _build_log_groups(logs):
+        groups = defaultdict(list)
 
         for log in logs:
-            if log.metric.name not in sheet_names:
-                batch_update_request = {
-                    'requests': [{
-                        'addSheet': {
-                            'properties': {
-                                'title': log.metric.name
-                            }
-                        }
-                    }]
-                }
+            groups[log.metric.name].append(log)
+
+        return groups
+
+    def export(self, logs):
+
+        groups = GoogleSheets._build_log_groups(logs)
+        groups_exported = []
+
+        try:
+            response = self.service.spreadsheets().get(
+                spreadsheetId=self.sheet_id
+            ).execute()
+
+            found_sheets = {sheet['properties']['title']
+                            for sheet in response['sheets']}
+            missing_sheets = groups.keys() - found_sheets
+
+            if missing_sheets:
+                missing_sheet_requests = [
+                    {'addSheet': {'properties': {'title': sheet}}}
+                    for sheet in missing_sheets
+                ]
 
                 self.service.spreadsheets().batchUpdate(
                     spreadsheetId=self.sheet_id,
-                    body=batch_update_request
+                    body={'requests': missing_sheet_requests}
                 ).execute()
 
-                sheet_names.append(log.metric.name)
+            for metric_name in groups.keys():
+                values = []
 
-            if type(log.value) is bytes:
-                log_value = log.value.decode('utf-8')
-            else:
-                log_value = log.value
+                for log in groups[metric_name]:
+                    if type(log.value) is bytes:
+                        log_value = log.value.decode('utf-8')
+                    else:
+                        log_value = log.value
 
-            values = [[log.timestamp.isoformat(), log_value]]
-            resource = {
-              'values': values
-            }
-            self.service.spreadsheets().values().append(
-                spreadsheetId=self.sheet_id,
-                range='{sheet}!A:A'.format(sheet=log.metric.name),
-                body=resource,
-                valueInputOption='USER_ENTERED'
-            ).execute()
+                    values.append([log.timestamp.isoformat(), log_value])
+
+                resource = {
+                  'values': values
+                }
+                self.service.spreadsheets().values().append(
+                    spreadsheetId=self.sheet_id,
+                    range='{sheet}!A:A'.format(sheet=metric_name),
+                    body=resource,
+                    valueInputOption='USER_ENTERED'
+                ).execute()
+
+                groups_exported.append(metric_name)
+
+        except HttpError as e:
+            if int(e.resp['status']) != HTTPStatus.TOO_MANY_REQUESTS:
+                raise
+
+            failed_logs = []
+
+            for group in groups.keys():
+                if group not in groups_exported:
+                    failed_logs.extend(groups[group])
+
+            raise RateLimitError('Being rate limited, cannot continue exporting', failed_logs)
+
+
+class RateLimitError(Exception):
+    def __init__(self, message, failed_logs):
+        super().__init__(message)
+        self.failed_logs = failed_logs
