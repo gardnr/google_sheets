@@ -1,11 +1,11 @@
 # Google Sheets exporter
 
-[Instructions on finding sheet ID](https://developers.google.com/sheets/api/guides/concepts#sheet_id)
+[Instructions for finding Spreadsheet ID](https://developers.google.com/sheets/api/guides/concepts#spreadsheet_id)
 
 ```
 python3 -m pip install -r requirements.txt
 
-gardnr add driver google-sheets google_sheets.driver:GoogleSheets -c sheet_id=<sheet ID>
+gardnr add driver google-sheets google_sheets.driver:GoogleSheets -c spreadsheet_id=<Spreadsheet ID>
 ```
 
 **NOTE**

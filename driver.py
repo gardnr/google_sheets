@@ -58,7 +58,7 @@ class GoogleSheets(drivers.Exporter):
 
         try:
             response = self.service.spreadsheets().get(
-                spreadsheetId=self.sheet_id
+                spreadsheetId=self.spreadsheet_id
             ).execute()
 
             found_sheets = {sheet['properties']['title']
@@ -72,7 +72,7 @@ class GoogleSheets(drivers.Exporter):
                 ]
 
                 self.service.spreadsheets().batchUpdate(
-                    spreadsheetId=self.sheet_id,
+                    spreadsheetId=self.spreadsheet_id,
                     body={'requests': missing_sheet_requests}
                 ).execute()
 
@@ -91,7 +91,7 @@ class GoogleSheets(drivers.Exporter):
                   'values': values
                 }
                 self.service.spreadsheets().values().append(
-                    spreadsheetId=self.sheet_id,
+                    spreadsheetId=self.spreadsheet_id,
                     range='{sheet}!A:A'.format(sheet=metric_name),
                     body=resource,
                     valueInputOption='USER_ENTERED'
